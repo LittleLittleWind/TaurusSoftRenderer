@@ -219,7 +219,7 @@ void ShowObjShaded()
 			}
 			Vec3f n = (world_coords[2] - world_coords[0]) ^ (world_coords[1] - world_coords[0]);
 			n.normalize();
-			float intensity = n * light_dir;
+			float intensity = (n * light_dir) * 0.5f + 0.5f;
 			if (intensity > 0) {
 				triangle(screen_coords, uv_coords, intensity);
 			}
