@@ -1,6 +1,25 @@
 # TaurusSoftRenderer
  
-This is a C++ Software Renderer/Rasterizer based on [SDL2](www.libsdl.org).
+This is a C++ Software Renderer/Rasterizer.
+
+
+## Features
+* Wireframe rendering
+* Back-face cullings
+* Depth testing
+* Flat shading
 
 ## How to use it
-Clone and open with Visual Studio.
+Clone and open TaurusRenderer.sln with Visual Studio.
+
+## References
+* [SDL2](www.libsdl.org)
+* [Tiny Renderer](https://github.com/ssloy/tinyrenderer)
+* [OpenGL Matrix Class](http://www.songho.ca/opengl/gl_matrix.html)
+
+## Asset Acknowledgements
+* [Utah Teapot by Ben Houston](https://clara.io/view/8d9a8181-f1ce-4340-b24f-e36bbaf318f7)
+* [TGA format game ready tiling textures : KatsBits TEXTURES](https://www.katsbits.com/download/textures/)
+
+## License
+[MIT License](LICENSE)

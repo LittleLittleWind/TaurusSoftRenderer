@@ -18,16 +18,11 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="tgaimage.cpp">
+    <ClCompile Include="RenderSystem\Renderer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="geometry.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="tgaimage.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
+    <ClCompile Include="RenderSystem\tgaimage.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
