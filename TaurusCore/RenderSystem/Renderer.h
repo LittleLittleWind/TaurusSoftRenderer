@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <cmath>
 #include <algorithm>
-#include "..\geometry.h"
+#include "..\Matrix\Vectors.h"
 #include "tgaimage.h"
 
 class Renderer {
@@ -25,8 +25,8 @@ private:
 
     void SDLDrawPixel(int x, int y);
     void line(int x0, int y0, int x1, int y1);
-    Vec3f barycentric(Vec3f* pts, Vec3f P);
-    void triangle(Vec3f* pts, Vec2f* uvs, float c);
+    Vector3 barycentric(Vector3* pts, Vector3 P);
+    void triangle(Vector3* pts, Vector2* uvs, float c);
     void ShowObjWireframe();
     void ShowObjShaded();
     int* zbuffer;

@@ -123,34 +123,34 @@ void Renderer::line(int x0, int y0, int x1, int y1)
 	}
 }
 
-Vec3f Renderer::barycentric(Vec3f* pts, Vec3f P)
+Vector3 Renderer::barycentric(Vector3* pts, Vector3 P)
 {
-	Vec3f u = cross(Vec3f(pts[2][0] - pts[0][0], pts[1][0] - pts[0][0], pts[0][0] - P[0]), Vec3f(pts[2][1] - pts[0][1], pts[1][1] - pts[0][1], pts[0][1] - P[1]));
-	if (std::abs(u[2]) < 1e-2) return Vec3f(-1, 1, 1);
-	return Vec3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+	Vector3 u = Vector3(pts[2][0] - pts[0][0], pts[1][0] - pts[0][0], pts[0][0] - P[0]).cross(Vector3(pts[2][1] - pts[0][1], pts[1][1] - pts[0][1], pts[0][1] - P[1]));
+	if (std::abs(u[2]) < 1e-2) return Vector3(-1, 1, 1);
+	return Vector3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
 }
 
-void Renderer::triangle(Vec3f* pts, Vec2f* uvs, float c)
+void Renderer::triangle(Vector3* pts, Vector2* uvs, float c)
 {
-	Vec2f bboxmin(mWidth - 1, mHeight - 1);
-	Vec2f bboxmax(0, 0);
-	Vec2f clamp(mWidth - 1, mHeight - 1);
+	Vector2 bboxmin(mWidth - 1, mHeight - 1);
+	Vector2 bboxmax(0, 0);
+	Vector2 clamp(mWidth - 1, mHeight - 1);
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 2; j++) {
 			bboxmin[j] = std::max(0.f, std::min(bboxmin[j], pts[i][j]));
 			bboxmax[j] = std::min(clamp[j], std::max(bboxmax[j], pts[i][j]));
 		}
 	}
-	Vec3f P;
+	Vector3 P;
 	for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++) {
 		for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++) {
-			Vec3f bc_screen = barycentric(pts, P);
+			Vector3 bc_screen = barycentric(pts, P);
 			if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
 			P.z = pts[0][2] * bc_screen[0] + pts[1][2] * bc_screen[1] + pts[2][2] * bc_screen[2];
 			if (zbuffer[int(P.x + P.y * mWidth)] < P.z)
 			{
 				zbuffer[int(P.x + P.y * mWidth)] = P.z;
-				Vec2f uv = uvs[0] * bc_screen[0] + uvs[1] * bc_screen[1] + uvs[2] * bc_screen[2];
+				Vector2 uv = uvs[0] * bc_screen[0] + uvs[1] * bc_screen[1] + uvs[2] * bc_screen[2];
 				TGAColor tgaColor = tgaImage.get(uv[0] * tgaImage.get_width(), uv[1] * tgaImage.get_height()) * c;
 				SDL_SetRenderDrawColor(mRenderer, tgaColor[2], tgaColor[1], tgaColor[0], 0xFF);
 				SDLDrawPixel(P.x, P.y);
@@ -207,7 +207,7 @@ void Renderer::ShowObjShaded()
 		printf("Failed to load/parse .obj.\n");
 		return;
 	}
-	Vec3f light_dir(0, 0, -1);
+	Vector3 light_dir(0, 0, -1);
 	for (size_t i = 0; i < shapes.size(); i++) {
 		size_t index_offset = 0;
 		assert(shapes[i].mesh.num_face_vertices.size() == shapes[i].mesh.material_ids.size());
@@ -215,24 +215,24 @@ void Renderer::ShowObjShaded()
 		// For each face
 		for (size_t f = 0; f < shapes[i].mesh.num_face_vertices.size(); f++) {
 			size_t fnum = shapes[i].mesh.num_face_vertices[f];
-			Vec3f screen_coords[3];
-			Vec3f world_coords[3];
-			Vec2f uv_coords[3];
+			Vector3 screen_coords[3];
+			Vector3 world_coords[3];
+			Vector2 uv_coords[3];
 			// For each vertex in the face
 			for (size_t v = 0; v < fnum; v++) {
 				tinyobj::index_t idx = shapes[i].mesh.indices[index_offset + v];
 				int x0 = (attrib.vertices[3 * idx.vertex_index + 0]) * 8 + mWidth / 2.;
 				int y0 = (attrib.vertices[3 * idx.vertex_index + 1]) * 8 + mHeight / 2;
 				float z0 = attrib.vertices[3 * idx.vertex_index + 2];
-				screen_coords[v] = Vec3f(x0, y0, z0);
-				world_coords[v] = Vec3f(attrib.vertices[3 * idx.vertex_index + 0], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2]);
+				screen_coords[v] = Vector3(x0, y0, z0);
+				world_coords[v] = Vector3(attrib.vertices[3 * idx.vertex_index + 0], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2]);
 				float u0 = attrib.texcoords[2 * idx.texcoord_index + 0];
 				float v0 = attrib.texcoords[2 * idx.texcoord_index + 1];
-				uv_coords[v] = Vec2f(u0 - (int)u0, v0 - (int)v0);
+				uv_coords[v] = Vector2(u0 - (int)u0, v0 - (int)v0);
 			}
-			Vec3f n = (world_coords[2] - world_coords[0]) ^ (world_coords[1] - world_coords[0]);
+			Vector3 n = (world_coords[2] - world_coords[0]).cross(world_coords[1] - world_coords[0]);
 			n.normalize();
-			float intensity = (n * light_dir) * 0.5f + 0.5f;
+			float intensity = (n.dot(light_dir)) * 0.5f + 0.5f;
 			if (intensity > 0) {
 				triangle(screen_coords, uv_coords, intensity);
 			}
