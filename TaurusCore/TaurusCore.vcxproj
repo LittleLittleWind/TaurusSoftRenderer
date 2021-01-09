@@ -72,18 +72,18 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\Taurus\TaurusEngine\SDL2\include;D:\Taurus\TaurusSoftRenderer\tinyobjloader;$(IncludePath)</IncludePath>
-    <ReferencePath>D:\Taurus\TaurusEngine\SDL2\lib\x86;$(ReferencePath)</ReferencePath>
-    <LibraryPath>D:\Taurus\TaurusEngine\SDL2\lib\x86;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)SDL2\include;$(SolutionDir)\tinyobjloader;$(IncludePath)</IncludePath>
+    <ReferencePath>$(SolutionDir)SDL2\lib\x86;$(ReferencePath)</ReferencePath>
+    <LibraryPath>$(SolutionDir)SDL2\lib\x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\Taurus\TaurusSoftRenderer\tinyobjloader;D:\Taurus\TaurusEngine\SDL2\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Taurus\TaurusEngine\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
-    <ReferencePath>D:\Taurus\TaurusSoftRenderer\SDL2\lib\x64;$(ReferencePath)</ReferencePath>
+    <IncludePath>$(SolutionDir)tinyobjloader;$(SolutionDir)SDL2\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)SDL2\lib\x64;$(LibraryPath)</LibraryPath>
+    <ReferencePath>$(SolutionDir)SDL2\lib\x64;$(ReferencePath)</ReferencePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -127,6 +127,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
