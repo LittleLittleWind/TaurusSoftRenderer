@@ -16,7 +16,6 @@ public:
     bool UpdateFrame();
 private:
     Renderer(const Renderer&);
-    Renderer& operator = (const Renderer&);
     void Init(int screenWidth, int ScreenHeight);
     void Close();
     SDL_Window* mWindow = NULL;
@@ -29,10 +28,13 @@ private:
     void triangle(Vector3* pts, Vector2* uvs, float c);
     void ShowObjWireframe();
     void ShowObjShaded();
+    void ShowTextTip();
     int* zbuffer;
     TGAImage tgaImage = TGAImage();
+    TGAImage textTipImage = TGAImage();
     SDL_Event e;
     bool isInited;
+    bool useWireFrame;
 };
 
 #endif //__RENDERER_H__
