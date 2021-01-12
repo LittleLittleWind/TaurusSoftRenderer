@@ -7,7 +7,7 @@ This is a C++ Software Renderer/Rasterizer.
 * Wireframe rendering
 * Back-face cullings
 * Depth testing
-* Flat shading
+* Phong shading
 
 ## How to use it
 Clone and open TaurusRenderer.sln with Visual Studio.

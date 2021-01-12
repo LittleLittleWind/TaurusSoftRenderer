@@ -72,7 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)SDL2\include;$(SolutionDir)\tinyobjloader;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)SDL2\include;$(SolutionDir)tinyobjloader;$(SolutionDir)TaurusCore\Matrix;$(IncludePath)</IncludePath>
     <ReferencePath>$(SolutionDir)SDL2\lib\x86;$(ReferencePath)</ReferencePath>
     <LibraryPath>$(SolutionDir)SDL2\lib\x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
@@ -81,7 +81,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)tinyobjloader;$(SolutionDir)SDL2\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)tinyobjloader;$(SolutionDir)SDL2\include;$(SolutionDir)TaurusCore\Matrix;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)SDL2\lib\x64;$(LibraryPath)</LibraryPath>
     <ReferencePath>$(SolutionDir)SDL2\lib\x64;$(ReferencePath)</ReferencePath>
   </PropertyGroup>
@@ -148,6 +148,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Matrix\Matrices.cpp" />
+    <ClCompile Include="RenderSystem\PhongShader.cpp" />
     <ClCompile Include="RenderSystem\Renderer.cpp" />
     <ClCompile Include="RenderSystem\tgaimage.cpp" />
   </ItemGroup>

@@ -7,6 +7,7 @@
 #include <algorithm>
 #include "..\Matrix\Vectors.h"
 #include "tgaimage.h"
+#include "PhongShader.h"
 
 class Renderer {
 public:
@@ -25,8 +26,7 @@ private:
     void SDLDrawPixel(int x, int y);
     void line(int x0, int y0, int x1, int y1);
     Vector3 barycentric(Vector3* pts, Vector3 P);
-    void triangle(Vector3* pts, Vector2* uvs, float c);
-    void ShowObjWireframe();
+    void triangle(Vector3* pts, float c, PhongShader *shader);
     void ShowObjShaded();
     void ShowTextTip();
     int* zbuffer;

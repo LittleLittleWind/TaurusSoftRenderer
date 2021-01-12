@@ -27,22 +27,20 @@ bool Renderer::UpdateFrame()
 		{
 			switch (e.key.keysym.sym)
 			{
-			case SDLK_1:
-				useWireFrame = false;
-				break;
-			case SDLK_2:
-				useWireFrame = true;
-				break;
-			default:
-				break;
+				case SDLK_1:
+					useWireFrame = false;
+					break;
+				case SDLK_2:
+					useWireFrame = true;
+					break;
+				default:
+					break;
 			}
 		}
 	}
 
 	SDL_SetRenderDrawColor(mRenderer, 0, 0, 0, 0xFF);
 	SDL_RenderClear(mRenderer);
-
-	SDL_SetRenderDrawColor(mRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
 	ShowObjShaded();
 	ShowTextTip();
 
@@ -105,6 +103,7 @@ void Renderer::SDLDrawPixel(int x, int y)
 
 void Renderer::line(int x0, int y0, int x1, int y1)
 {
+	SDL_SetRenderDrawColor(mRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
 	bool steep = false;
 	if (std::abs(x0 - x1) < std::abs(y0 - y1)) {
 		std::swap(x0, y0);
@@ -142,7 +141,7 @@ Vector3 Renderer::barycentric(Vector3* pts, Vector3 P)
 	return Vector3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
 }
 
-void Renderer::triangle(Vector3* pts, Vector2* uvs, float c)
+void Renderer::triangle(Vector3* pts, float c, PhongShader *shader)
 {
 	Vector2 bboxmin(mWidth - 1, mHeight - 1);
 	Vector2 bboxmax(0, 0);
@@ -162,8 +161,7 @@ void Renderer::triangle(Vector3* pts, Vector2* uvs, float c)
 			if (zbuffer[int(P.x + P.y * mWidth)] < P.z)
 			{
 				zbuffer[int(P.x + P.y * mWidth)] = P.z;
-				Vector2 uv = uvs[0] * bc_screen[0] + uvs[1] * bc_screen[1] + uvs[2] * bc_screen[2];
-				TGAColor tgaColor = tgaImage.get(uv[0] * tgaImage.get_width(), uv[1] * tgaImage.get_height()) * c;
+				TGAColor tgaColor = shader->fragment(bc_screen) * c;
 				SDL_SetRenderDrawColor(mRenderer, tgaColor[2], tgaColor[1], tgaColor[0], 0xFF);
 				SDLDrawPixel(P.x, P.y);
 			}
@@ -189,45 +187,36 @@ void Renderer::ShowObjShaded()
 	for (size_t i = 0; i < shapes.size(); i++) {
 		size_t index_offset = 0;
 		assert(shapes[i].mesh.num_face_vertices.size() == shapes[i].mesh.material_ids.size());
-
+		PhongShader shader(&tgaImage);
 		// For each face
 		for (size_t f = 0; f < shapes[i].mesh.num_face_vertices.size(); f++) {
 			size_t fnum = shapes[i].mesh.num_face_vertices[f];
-			Vector3 screen_coords[3];
-			Vector3 world_coords[3];
-			Vector2 uv_coords[3];
+			Vector3 model_coords[3];
+			Vector3 clip_coords[3];
+
 			// For each vertex in the face
 			for (size_t v = 0; v < fnum; v++) {
-				if (useWireFrame)
-				{
-					tinyobj::index_t idx = shapes[i].mesh.indices[index_offset + v];
-					tinyobj::index_t idx1 = shapes[i].mesh.indices[index_offset + (v + 1) % fnum];
-					int x0 = (attrib.vertices[3 * idx.vertex_index + 0]) * 8 + mWidth / 2.;
-					int y0 = (attrib.vertices[3 * idx.vertex_index + 1]) * 8 + mHeight / 2.;
-					int x1 = (attrib.vertices[3 * idx1.vertex_index + 0]) * 8 + mWidth / 2.;
-					int y1 = (attrib.vertices[3 * idx1.vertex_index + 1]) * 8 + mHeight / 2.;
-					line(x0, y0, x1, y1);
-				}
-				else
-				{
-					tinyobj::index_t idx = shapes[i].mesh.indices[index_offset + v];
-					int x0 = (attrib.vertices[3 * idx.vertex_index + 0]) * 8 + mWidth / 2.;
-					int y0 = (attrib.vertices[3 * idx.vertex_index + 1]) * 8 + mHeight / 2;
-					float z0 = attrib.vertices[3 * idx.vertex_index + 2];
-					screen_coords[v] = Vector3(x0, y0, z0);
-					world_coords[v] = Vector3(attrib.vertices[3 * idx.vertex_index + 0], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2]);
-					float u0 = attrib.texcoords[2 * idx.texcoord_index + 0];
-					float v0 = attrib.texcoords[2 * idx.texcoord_index + 1];
-					uv_coords[v] = Vector2(u0 - (int)u0, v0 - (int)v0);
-				}
+				tinyobj::index_t idx = shapes[i].mesh.indices[index_offset + v];
+				Vector3 model_coord = Vector3(attrib.vertices[3 * idx.vertex_index + 0], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2]);
+				model_coords[v] = model_coord;
+				float u0 = attrib.texcoords[2 * idx.texcoord_index + 0];
+				float v0 = attrib.texcoords[2 * idx.texcoord_index + 1];
+				shader.varying_uv.setColumn(v, Vector3(u0 - (int)u0, v0 - (int)v0, 0));
+				clip_coords[v] = shader.vertex(model_coord);
 			}
-			if (!useWireFrame)
+			if (useWireFrame)
 			{
-				Vector3 n = (world_coords[2] - world_coords[0]).cross(world_coords[1] - world_coords[0]);
+				line(clip_coords[0].x, clip_coords[0].y, clip_coords[1].x, clip_coords[1].y);
+				line(clip_coords[1].x, clip_coords[1].y, clip_coords[2].x, clip_coords[2].y);
+				line(clip_coords[2].x, clip_coords[2].y, clip_coords[0].x, clip_coords[0].y);
+			}
+			else
+			{
+				Vector3 n = (model_coords[2] - model_coords[0]).cross(model_coords[1] - model_coords[0]);
 				n.normalize();
 				float intensity = (n.dot(light_dir)) * 0.5f + 0.5f;
 				if (intensity > 0) {
-					triangle(screen_coords, uv_coords, intensity);
+					triangle(clip_coords, intensity, &shader);
 				}
 			}
 			index_offset += fnum;
