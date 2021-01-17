@@ -1,6 +1,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 #include "Renderer.h"
+#include <cmath>
 
 Renderer::Renderer(int width, int height):mWidth(width), mHeight(height)
 {
@@ -32,6 +33,18 @@ bool Renderer::UpdateFrame()
 					break;
 				case SDLK_2:
 					useWireFrame = true;
+					break;
+				case SDLK_w:
+					cameraPos.y -= 1;
+					break;
+				case SDLK_s:
+					cameraPos.y += 1;
+					break;
+				case SDLK_a:
+					cameraPos.x +=1;
+					break;
+				case SDLK_d:
+					cameraPos.x -= 1;
 					break;
 				default:
 					break;
@@ -85,6 +98,7 @@ void Renderer::Init(int screenWidth, int ScreenHeight)
 	
 	tgaImage.read_tga_file("../Assets/brick3.tga");
 	textTipImage.read_tga_file("../Assets/texttip.tga");
+	cameraPos = Vector3(0, 1, -40);
 }
 
 void Renderer::Close()
@@ -141,23 +155,41 @@ Vector3 Renderer::barycentric(Vector3* pts, Vector3 P)
 	return Vector3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
 }
 
-void Renderer::triangle(Vector3* pts, float c, PhongShader *shader)
+void Renderer::triangle(Vector4* pts, float c, PhongShader *shader)
 {
+	Vector3 screenPts[3];
+	screenPts[0] = Vector3(pts[0].x / pts[0].w, pts[0].y / pts[0].w, pts[0].z / pts[0].w);
+	screenPts[1] = Vector3(pts[1].x / pts[1].w, pts[1].y / pts[1].w, pts[1].z / pts[1].w);
+	screenPts[2] = Vector3(pts[2].x / pts[2].w, pts[2].y / pts[2].w, pts[2].z / pts[2].w);
+	for (int i = 0; i < 3; i++)
+	{
+		screenPts[i].x = (screenPts[i].x / 2 + 1 / 2) * mWidth;
+		screenPts[i].y = (screenPts[i].y / 2 + 1 / 2) * mHeight;
+	}
+
+	if (useWireFrame)
+	{
+		line(screenPts[0].x, screenPts[0].y, screenPts[1].x, screenPts[1].y);
+		line(screenPts[1].x, screenPts[1].y, screenPts[2].x, screenPts[2].y);
+		line(screenPts[2].x, screenPts[2].y, screenPts[0].x, screenPts[0].y);
+		return;
+	}
+
 	Vector2 bboxmin(mWidth - 1, mHeight - 1);
 	Vector2 bboxmax(0, 0);
 	Vector2 clamp(mWidth - 1, mHeight - 1);
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 2; j++) {
-			bboxmin[j] = std::max(0.f, std::min(bboxmin[j], pts[i][j]));
-			bboxmax[j] = std::min(clamp[j], std::max(bboxmax[j], pts[i][j]));
+			bboxmin[j] = std::max(0.f, std::min(bboxmin[j], screenPts[i][j]));
+			bboxmax[j] = std::min(clamp[j], std::max(bboxmax[j], screenPts[i][j]));
 		}
 	}
 	Vector3 P;
 	for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++) {
 		for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++) {
-			Vector3 bc_screen = barycentric(pts, P);
+			Vector3 bc_screen = barycentric(screenPts, P);
 			if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
-			P.z = pts[0][2] * bc_screen[0] + pts[1][2] * bc_screen[1] + pts[2][2] * bc_screen[2];
+			P.z = screenPts[0][2] * bc_screen[0] + screenPts[1][2] * bc_screen[1] + screenPts[2][2] * bc_screen[2];
 			if (zbuffer[int(P.x + P.y * mWidth)] < P.z)
 			{
 				zbuffer[int(P.x + P.y * mWidth)] = P.z;
@@ -184,15 +216,16 @@ void Renderer::ShowObjShaded()
 		return;
 	}
 	Vector3 light_dir(0, 0, -1);
+	Matrix4 mvpMatrix = GetMVPMatrix();
 	for (size_t i = 0; i < shapes.size(); i++) {
 		size_t index_offset = 0;
 		assert(shapes[i].mesh.num_face_vertices.size() == shapes[i].mesh.material_ids.size());
-		PhongShader shader(&tgaImage);
+		PhongShader shader(&mvpMatrix, &tgaImage);
 		// For each face
 		for (size_t f = 0; f < shapes[i].mesh.num_face_vertices.size(); f++) {
 			size_t fnum = shapes[i].mesh.num_face_vertices[f];
 			Vector3 model_coords[3];
-			Vector3 clip_coords[3];
+			Vector4 clip_coords[3];
 
 			// For each vertex in the face
 			for (size_t v = 0; v < fnum; v++) {
@@ -204,24 +237,64 @@ void Renderer::ShowObjShaded()
 				shader.varying_uv.setColumn(v, Vector3(u0 - (int)u0, v0 - (int)v0, 0));
 				clip_coords[v] = shader.vertex(model_coord);
 			}
-			if (useWireFrame)
-			{
-				line(clip_coords[0].x, clip_coords[0].y, clip_coords[1].x, clip_coords[1].y);
-				line(clip_coords[1].x, clip_coords[1].y, clip_coords[2].x, clip_coords[2].y);
-				line(clip_coords[2].x, clip_coords[2].y, clip_coords[0].x, clip_coords[0].y);
+
+			Vector3 n = (model_coords[2] - model_coords[0]).cross(model_coords[1] - model_coords[0]);
+			n.normalize();
+			float intensity = (n.dot(light_dir)) * 0.5f + 0.5f;
+			if (intensity > 0) {
+				triangle(clip_coords, intensity, &shader);
 			}
-			else
-			{
-				Vector3 n = (model_coords[2] - model_coords[0]).cross(model_coords[1] - model_coords[0]);
-				n.normalize();
-				float intensity = (n.dot(light_dir)) * 0.5f + 0.5f;
-				if (intensity > 0) {
-					triangle(clip_coords, intensity, &shader);
-				}
-			}
+			
 			index_offset += fnum;
 		}
 	}
+}
+
+Matrix4 Renderer::GetMVPMatrix()
+{
+	Matrix4 scaleM = Matrix4();
+	scaleM.setColumn(0, Vector4(1, 0, 0, 0));
+	scaleM.setColumn(1, Vector4(0, 1, 0, 0));
+	scaleM.setColumn(2, Vector4(0, 0, 1, 0));
+	scaleM.setColumn(3, Vector4(0, 0, 0, 1));
+	Matrix4 rotationM = Matrix4();
+	rotationM.setColumn(0, Vector4(1, 0, 0, 0));
+	rotationM.setColumn(1, Vector4(0, 1, 0, 0));
+	rotationM.setColumn(2, Vector4(0, 0, 1, 0));
+	rotationM.setColumn(3, Vector4(0, 0, 0, 1));
+	Matrix4 transformM = Matrix4();
+	transformM.setColumn(0, Vector4(1, 0, 0, 0));
+	transformM.setColumn(1, Vector4(0, 1, 0, 0));
+	transformM.setColumn(2, Vector4(0, 0, 1, 0));
+	transformM.setColumn(3, Vector4(0, 0, 0, 1));
+	Matrix4 modelMatrix = transformM * rotationM * scaleM;
+
+	Matrix4 minusM = Matrix4();
+	minusM.setColumn(0, Vector4(1, 0, 0, 0));
+	minusM.setColumn(1, Vector4(0, 1, 0, 0));
+	minusM.setColumn(2, Vector4(0, 0, -1, 0));
+	minusM.setColumn(3, Vector4(0, 0, 0, 1));
+	Matrix4 cameraRotationM = Matrix4();
+	cameraRotationM.setColumn(0, Vector4(1, 0, 0, 0));
+	cameraRotationM.setColumn(1, Vector4(0, 1, 0, 0));
+	cameraRotationM.setColumn(2, Vector4(0, 0, 1, 0));
+	cameraRotationM.setColumn(3, Vector4(0, 0, 0, 1));
+	Matrix4 cameraTransformM = Matrix4();
+	cameraTransformM.setColumn(0, Vector4(1, 0, 0, 0));
+	cameraTransformM.setColumn(1, Vector4(0, 1, 0, 0));
+	cameraTransformM.setColumn(2, Vector4(0, 0, 1, 0));
+	cameraTransformM.setColumn(3, Vector4(cameraPos.x, cameraPos.y, cameraPos.z, 1));
+	Matrix4 viewMatrix = minusM * cameraRotationM.invert() * cameraTransformM.invert();
+
+	float fovAngle = 60 * 3.14 / 180;
+	float f = 1000, n = 0.3;
+	Matrix4 projectionMatrix = Matrix4();
+	projectionMatrix.setColumn(0, Vector4(1/ std::tan(fovAngle/2) * mHeight / mWidth, 0, 0, 0));
+	projectionMatrix.setColumn(1, Vector4(0, 1/ std::tan(fovAngle / 2), 0, 0));
+	projectionMatrix.setColumn(2, Vector4(0, 0, -(f + n) / (f - n), -1));
+	projectionMatrix.setColumn(3, Vector4(0, 0, -2 * f * n / (f - n), 0));
+
+	return projectionMatrix * viewMatrix * modelMatrix;
 }
 
 void Renderer::ShowTextTip()

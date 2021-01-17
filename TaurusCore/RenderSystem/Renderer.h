@@ -26,8 +26,9 @@ private:
     void SDLDrawPixel(int x, int y);
     void line(int x0, int y0, int x1, int y1);
     Vector3 barycentric(Vector3* pts, Vector3 P);
-    void triangle(Vector3* pts, float c, PhongShader *shader);
+    void triangle(Vector4* pts, float c, PhongShader *shader);
     void ShowObjShaded();
+    Matrix4 GetMVPMatrix();
     void ShowTextTip();
     int* zbuffer;
     TGAImage tgaImage = TGAImage();
@@ -35,6 +36,7 @@ private:
     SDL_Event e;
     bool isInited;
     bool useWireFrame;
+    Vector3 cameraPos;
 };
 
 #endif //__RENDERER_H__
