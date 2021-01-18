@@ -20,5 +20,4 @@ TGAColor PhongShader::fragment(const Vector3& bar)
 {
 	Vector3 bn = varying_uv * bar;
 	return tgaImage->get(bn[0] * tgaImage->get_width(), bn[1] * tgaImage->get_height());
-	
 }

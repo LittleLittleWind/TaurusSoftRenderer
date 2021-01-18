@@ -158,13 +158,11 @@ Vector3 Renderer::barycentric(Vector3* pts, Vector3 P)
 void Renderer::triangle(Vector4* pts, float c, PhongShader *shader)
 {
 	Vector3 screenPts[3];
-	screenPts[0] = Vector3(pts[0].x / pts[0].w, pts[0].y / pts[0].w, pts[0].z / pts[0].w);
-	screenPts[1] = Vector3(pts[1].x / pts[1].w, pts[1].y / pts[1].w, pts[1].z / pts[1].w);
-	screenPts[2] = Vector3(pts[2].x / pts[2].w, pts[2].y / pts[2].w, pts[2].z / pts[2].w);
 	for (int i = 0; i < 3; i++)
 	{
-		screenPts[i].x = (screenPts[i].x / 2 + 1 / 2) * mWidth;
-		screenPts[i].y = (screenPts[i].y / 2 + 1 / 2) * mHeight;
+		screenPts[i] = Vector3(pts[i].x / pts[i].w, pts[i].y / pts[i].w, pts[i].z / pts[i].w);
+		screenPts[i].x = (screenPts[i].x / 2 + 0.5) * mWidth;
+		screenPts[i].y = (screenPts[i].y / 2 + 0.5) * mHeight;
 	}
 
 	if (useWireFrame)
@@ -190,7 +188,7 @@ void Renderer::triangle(Vector4* pts, float c, PhongShader *shader)
 			Vector3 bc_screen = barycentric(screenPts, P);
 			if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
 			P.z = screenPts[0][2] * bc_screen[0] + screenPts[1][2] * bc_screen[1] + screenPts[2][2] * bc_screen[2];
-			if (zbuffer[int(P.x + P.y * mWidth)] < P.z)
+			if (zbuffer[int(P.x + P.y * mWidth)] > P.z)
 			{
 				zbuffer[int(P.x + P.y * mWidth)] = P.z;
 				TGAColor tgaColor = shader->fragment(bc_screen) * c;
@@ -204,7 +202,7 @@ void Renderer::triangle(Vector4* pts, float c, PhongShader *shader)
 void Renderer::ShowObjShaded()
 {
 	//Depth Buffer
-	for (int i = mWidth * mHeight; i--; zbuffer[i] = -std::numeric_limits<float>::max());
+	for (int i = mWidth * mHeight; i--; zbuffer[i] = (1 << 31) - 1);
 
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
@@ -241,9 +239,8 @@ void Renderer::ShowObjShaded()
 			Vector3 n = (model_coords[2] - model_coords[0]).cross(model_coords[1] - model_coords[0]);
 			n.normalize();
 			float intensity = (n.dot(light_dir)) * 0.5f + 0.5f;
-			if (intensity > 0) {
+			if (intensity > 0)
 				triangle(clip_coords, intensity, &shader);
-			}
 			
 			index_offset += fnum;
 		}
