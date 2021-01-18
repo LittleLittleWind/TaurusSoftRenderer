@@ -63,7 +63,7 @@ bool Renderer::UpdateFrame()
 
 void Renderer::Init(int screenWidth, int ScreenHeight)
 {
-	zbuffer = new int[mWidth * mHeight];
+	zbuffer = new float[mWidth * mHeight];
 	isInited = true;
 	useWireFrame = false;
 
@@ -155,7 +155,7 @@ Vector3 Renderer::barycentric(Vector3* pts, Vector3 P)
 	return Vector3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
 }
 
-void Renderer::triangle(Vector4* pts, float c, PhongShader *shader)
+void Renderer::triangle(Vector4* pts, PhongShader *shader)
 {
 	Vector3 screenPts[3];
 	for (int i = 0; i < 3; i++)
@@ -163,6 +163,7 @@ void Renderer::triangle(Vector4* pts, float c, PhongShader *shader)
 		screenPts[i] = Vector3(pts[i].x / pts[i].w, pts[i].y / pts[i].w, pts[i].z / pts[i].w);
 		screenPts[i].x = (screenPts[i].x / 2 + 0.5) * mWidth;
 		screenPts[i].y = (screenPts[i].y / 2 + 0.5) * mHeight;
+		screenPts[i].z = (screenPts[i].z / 2 + 0.5);
 	}
 
 	if (useWireFrame)
@@ -183,15 +184,15 @@ void Renderer::triangle(Vector4* pts, float c, PhongShader *shader)
 		}
 	}
 	Vector3 P;
-	for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++) {
-		for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++) {
+	for (P.x = (int)bboxmin.x; P.x <= (int)bboxmax.x; P.x++) {
+		for (P.y = (int)bboxmin.y; P.y <= (int)bboxmax.y; P.y++) {
 			Vector3 bc_screen = barycentric(screenPts, P);
 			if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
 			P.z = screenPts[0][2] * bc_screen[0] + screenPts[1][2] * bc_screen[1] + screenPts[2][2] * bc_screen[2];
 			if (zbuffer[int(P.x + P.y * mWidth)] > P.z)
 			{
 				zbuffer[int(P.x + P.y * mWidth)] = P.z;
-				TGAColor tgaColor = shader->fragment(bc_screen) * c;
+				TGAColor tgaColor = shader->fragment(bc_screen);
 				SDL_SetRenderDrawColor(mRenderer, tgaColor[2], tgaColor[1], tgaColor[0], 0xFF);
 				SDLDrawPixel(P.x, P.y);
 			}
@@ -202,7 +203,7 @@ void Renderer::triangle(Vector4* pts, float c, PhongShader *shader)
 void Renderer::ShowObjShaded()
 {
 	//Depth Buffer
-	for (int i = mWidth * mHeight; i--; zbuffer[i] = (1 << 31) - 1);
+	for (int i = mWidth * mHeight; i--; zbuffer[i] = FLT_MAX);
 
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
@@ -218,30 +219,29 @@ void Renderer::ShowObjShaded()
 	for (size_t i = 0; i < shapes.size(); i++) {
 		size_t index_offset = 0;
 		assert(shapes[i].mesh.num_face_vertices.size() == shapes[i].mesh.material_ids.size());
-		PhongShader shader(&mvpMatrix, &tgaImage);
+		PhongShader shader(&mvpMatrix, &tgaImage, light_dir);
 		// For each face
 		for (size_t f = 0; f < shapes[i].mesh.num_face_vertices.size(); f++) {
 			size_t fnum = shapes[i].mesh.num_face_vertices[f];
 			Vector3 model_coords[3];
 			Vector4 clip_coords[3];
+			Vector3 normals[3];
 
 			// For each vertex in the face
 			for (size_t v = 0; v < fnum; v++) {
 				tinyobj::index_t idx = shapes[i].mesh.indices[index_offset + v];
-				Vector3 model_coord = Vector3(attrib.vertices[3 * idx.vertex_index + 0], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2]);
-				model_coords[v] = model_coord;
+				model_coords[v] = Vector3(attrib.vertices[3 * idx.vertex_index + 0], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2]);
 				float u0 = attrib.texcoords[2 * idx.texcoord_index + 0];
 				float v0 = attrib.texcoords[2 * idx.texcoord_index + 1];
 				shader.varying_uv.setColumn(v, Vector3(u0 - (int)u0, v0 - (int)v0, 0));
-				clip_coords[v] = shader.vertex(model_coord);
+				float normalX = attrib.normals[3 * idx.normal_index + 0];
+				float normalY = attrib.normals[3 * idx.normal_index + 1];
+				float normalZ = attrib.normals[3 * idx.normal_index + 2];
+				shader.varying_normal.setColumn(v, Vector3(normalX, normalY, normalZ));
+				clip_coords[v] = shader.vertex(model_coords[v]);
 			}
-
-			Vector3 n = (model_coords[2] - model_coords[0]).cross(model_coords[1] - model_coords[0]);
-			n.normalize();
-			float intensity = (n.dot(light_dir)) * 0.5f + 0.5f;
-			if (intensity > 0)
-				triangle(clip_coords, intensity, &shader);
-			
+			if (shader.varying_normal.getColumn(0).dot(cameraPos) > 0 && shader.varying_normal.getColumn(1).dot(cameraPos) > 0 && shader.varying_normal.getColumn(2).dot(cameraPos) > 0)
+				triangle(clip_coords, &shader);
 			index_offset += fnum;
 		}
 	}

@@ -26,11 +26,11 @@ private:
     void SDLDrawPixel(int x, int y);
     void line(int x0, int y0, int x1, int y1);
     Vector3 barycentric(Vector3* pts, Vector3 P);
-    void triangle(Vector4* pts, float c, PhongShader *shader);
+    void triangle(Vector4* pts, PhongShader *shader);
     void ShowObjShaded();
     Matrix4 GetMVPMatrix();
     void ShowTextTip();
-    int* zbuffer;
+    float* zbuffer;
     TGAImage tgaImage = TGAImage();
     TGAImage textTipImage = TGAImage();
     SDL_Event e;
