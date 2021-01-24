@@ -27,7 +27,7 @@
     <ClCompile Include="Matrix\Matrices.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="RenderSystem\PhongShader.cpp">
+    <ClCompile Include="RenderSystem\SimpleShader.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

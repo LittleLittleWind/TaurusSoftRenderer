@@ -35,16 +35,22 @@ bool Renderer::UpdateFrame()
 					useWireFrame = true;
 					break;
 				case SDLK_w:
-					cameraPos.y -= 1;
-					break;
-				case SDLK_s:
 					cameraPos.y += 1;
 					break;
+				case SDLK_s:
+					cameraPos.y -= 1;
+					break;
 				case SDLK_a:
-					cameraPos.x +=1;
+					cameraPos.x -=1;
 					break;
 				case SDLK_d:
-					cameraPos.x -= 1;
+					cameraPos.x += 1;
+					break;
+				case SDLK_q:
+					yawAngle -= 10;
+					break;
+				case SDLK_e:
+					yawAngle += 10;
 					break;
 				default:
 					break;
@@ -98,7 +104,7 @@ void Renderer::Init(int screenWidth, int ScreenHeight)
 	
 	tgaImage.read_tga_file("../Assets/brick3.tga");
 	textTipImage.read_tga_file("../Assets/texttip.tga");
-	cameraPos = Vector3(0, 1, -40);
+	cameraPos = Vector4(0, 1, -40, 1);
 }
 
 void Renderer::Close()
@@ -155,7 +161,7 @@ Vector3 Renderer::barycentric(Vector3* pts, Vector3 P)
 	return Vector3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
 }
 
-void Renderer::triangle(Vector4* pts, PhongShader *shader)
+void Renderer::triangle(Vector4* pts, SimpleShader*shader)
 {
 	Vector3 screenPts[3];
 	for (int i = 0; i < 3; i++)
@@ -215,57 +221,60 @@ void Renderer::ShowObjShaded()
 		return;
 	}
 	Vector3 light_dir(0, 0, -1);
-	Matrix4 mvpMatrix = GetMVPMatrix();
+	Matrix4 modelMatrix = GetModelMatrix();
+	Matrix4 mvpMatrix = GetProjectionMatrix() * GetViewMatrix() * modelMatrix;
 	for (size_t i = 0; i < shapes.size(); i++) {
 		size_t index_offset = 0;
 		assert(shapes[i].mesh.num_face_vertices.size() == shapes[i].mesh.material_ids.size());
-		PhongShader shader(&mvpMatrix, &tgaImage, light_dir);
+		SimpleShader shader(&mvpMatrix, &modelMatrix, &tgaImage, light_dir);
 		// For each face
 		for (size_t f = 0; f < shapes[i].mesh.num_face_vertices.size(); f++) {
 			size_t fnum = shapes[i].mesh.num_face_vertices[f];
-			Vector3 model_coords[3];
+			Vector4 modelPts;
 			Vector4 clip_coords[3];
-			Vector3 normals[3];
-
+			Vector3 uv;
+			Vector4 normal;
+			Vector4 viewDir[3];
 			// For each vertex in the face
 			for (size_t v = 0; v < fnum; v++) {
 				tinyobj::index_t idx = shapes[i].mesh.indices[index_offset + v];
-				model_coords[v] = Vector3(attrib.vertices[3 * idx.vertex_index + 0], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2]);
-				float u0 = attrib.texcoords[2 * idx.texcoord_index + 0];
-				float v0 = attrib.texcoords[2 * idx.texcoord_index + 1];
-				shader.varying_uv.setColumn(v, Vector3(u0 - (int)u0, v0 - (int)v0, 0));
-				float normalX = attrib.normals[3 * idx.normal_index + 0];
-				float normalY = attrib.normals[3 * idx.normal_index + 1];
-				float normalZ = attrib.normals[3 * idx.normal_index + 2];
-				shader.varying_normal.setColumn(v, Vector3(normalX, normalY, normalZ));
-				clip_coords[v] = shader.vertex(model_coords[v]);
+				modelPts = Vector4(attrib.vertices[3 * idx.vertex_index + 0], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2], 1);
+				uv = Vector3(attrib.texcoords[2 * idx.texcoord_index + 0], attrib.texcoords[2 * idx.texcoord_index + 1], 0);
+				normal = Vector4(attrib.normals[3 * idx.normal_index + 0], attrib.normals[3 * idx.normal_index + 1], attrib.normals[3 * idx.normal_index + 2],0);
+				viewDir[v] = cameraPos - modelMatrix * modelPts;
+				clip_coords[v] = shader.vertex(v, modelPts, uv, normal);
 			}
-			if (shader.varying_normal.getColumn(0).dot(cameraPos) > 0 && shader.varying_normal.getColumn(1).dot(cameraPos) > 0 && shader.varying_normal.getColumn(2).dot(cameraPos) > 0)
+			if (shader.varying_normal.getColumn(0).dot(viewDir[0]) > 0 || shader.varying_normal.getColumn(1).dot(viewDir[1]) > 0 || shader.varying_normal.getColumn(2).dot(viewDir[2]) > 0)
 				triangle(clip_coords, &shader);
 			index_offset += fnum;
 		}
 	}
 }
 
-Matrix4 Renderer::GetMVPMatrix()
+Matrix4 Renderer::GetModelMatrix()
 {
+	float yawRadians = yawAngle * 3.14 / 180;
 	Matrix4 scaleM = Matrix4();
 	scaleM.setColumn(0, Vector4(1, 0, 0, 0));
 	scaleM.setColumn(1, Vector4(0, 1, 0, 0));
 	scaleM.setColumn(2, Vector4(0, 0, 1, 0));
 	scaleM.setColumn(3, Vector4(0, 0, 0, 1));
 	Matrix4 rotationM = Matrix4();
-	rotationM.setColumn(0, Vector4(1, 0, 0, 0));
+	rotationM.setColumn(0, Vector4(cos(yawAngle * 3.14 / 180), 0, -sin(yawAngle * 3.14 / 180), 0));
 	rotationM.setColumn(1, Vector4(0, 1, 0, 0));
-	rotationM.setColumn(2, Vector4(0, 0, 1, 0));
+	rotationM.setColumn(2, Vector4(sin(yawAngle * 3.14 / 180), 0, cos(yawAngle * 3.14 / 180), 0));
 	rotationM.setColumn(3, Vector4(0, 0, 0, 1));
 	Matrix4 transformM = Matrix4();
 	transformM.setColumn(0, Vector4(1, 0, 0, 0));
 	transformM.setColumn(1, Vector4(0, 1, 0, 0));
 	transformM.setColumn(2, Vector4(0, 0, 1, 0));
 	transformM.setColumn(3, Vector4(0, 0, 0, 1));
-	Matrix4 modelMatrix = transformM * rotationM * scaleM;
+	return transformM * rotationM * scaleM;
+}
 
+
+Matrix4 Renderer::GetViewMatrix()
+{
 	Matrix4 minusM = Matrix4();
 	minusM.setColumn(0, Vector4(1, 0, 0, 0));
 	minusM.setColumn(1, Vector4(0, 1, 0, 0));
@@ -281,8 +290,11 @@ Matrix4 Renderer::GetMVPMatrix()
 	cameraTransformM.setColumn(1, Vector4(0, 1, 0, 0));
 	cameraTransformM.setColumn(2, Vector4(0, 0, 1, 0));
 	cameraTransformM.setColumn(3, Vector4(cameraPos.x, cameraPos.y, cameraPos.z, 1));
-	Matrix4 viewMatrix = minusM * cameraRotationM.invert() * cameraTransformM.invert();
+	return minusM * cameraRotationM.invert() * cameraTransformM.invert();
+}
 
+Matrix4 Renderer::GetProjectionMatrix()
+{
 	float fovAngle = 60 * 3.14 / 180;
 	float f = 1000, n = 0.3;
 	Matrix4 projectionMatrix = Matrix4();
@@ -290,8 +302,7 @@ Matrix4 Renderer::GetMVPMatrix()
 	projectionMatrix.setColumn(1, Vector4(0, 1/ std::tan(fovAngle / 2), 0, 0));
 	projectionMatrix.setColumn(2, Vector4(0, 0, -(f + n) / (f - n), -1));
 	projectionMatrix.setColumn(3, Vector4(0, 0, -2 * f * n / (f - n), 0));
-
-	return projectionMatrix * viewMatrix * modelMatrix;
+	return projectionMatrix;
 }
 
 void Renderer::ShowTextTip()

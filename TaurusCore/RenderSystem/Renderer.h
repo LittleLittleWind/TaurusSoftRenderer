@@ -7,7 +7,7 @@
 #include <algorithm>
 #include "..\Matrix\Vectors.h"
 #include "tgaimage.h"
-#include "PhongShader.h"
+#include "SimpleShader.h"
 
 class Renderer {
 public:
@@ -26,9 +26,11 @@ private:
     void SDLDrawPixel(int x, int y);
     void line(int x0, int y0, int x1, int y1);
     Vector3 barycentric(Vector3* pts, Vector3 P);
-    void triangle(Vector4* pts, PhongShader *shader);
+    void triangle(Vector4* pts, SimpleShader*shader);
     void ShowObjShaded();
-    Matrix4 GetMVPMatrix();
+    Matrix4 GetModelMatrix();
+    Matrix4 GetViewMatrix();
+    Matrix4 GetProjectionMatrix();
     void ShowTextTip();
     float* zbuffer;
     TGAImage tgaImage = TGAImage();
@@ -36,7 +38,8 @@ private:
     SDL_Event e;
     bool isInited;
     bool useWireFrame;
-    Vector3 cameraPos;
+    Vector4 cameraPos;
+    float yawAngle;
 };
 
 #endif //__RENDERER_H__

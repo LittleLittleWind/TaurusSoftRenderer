@@ -149,7 +149,7 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Matrix\Matrices.cpp" />
-    <ClCompile Include="RenderSystem\PhongShader.cpp" />
+    <ClCompile Include="RenderSystem\SimpleShader.cpp" />
     <ClCompile Include="RenderSystem\Renderer.cpp" />
     <ClCompile Include="RenderSystem\tgaimage.cpp" />
   </ItemGroup>

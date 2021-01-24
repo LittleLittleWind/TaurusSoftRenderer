@@ -7,10 +7,12 @@ This is a C++ Software Renderer/Rasterizer.
 * Wireframe rendering
 * Back-face cullings
 * Depth testing
-* Phong shading
+* Lambert shading
+* Shader support
 
 ## How to use it
 Clone and open TaurusRenderer.sln with Visual Studio.
+Press WASD to move camera.
 
 ## References
 * [SDL2](www.libsdl.org)
