@@ -30,5 +30,11 @@
     <ClCompile Include="RenderSystem\SimpleShader.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="RenderSystem\DepthShader.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderSystem\Utility.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -8,6 +8,8 @@
 #include "..\Matrix\Vectors.h"
 #include "tgaimage.h"
 #include "SimpleShader.h"
+#include "DepthShader.h"
+#include "Utility.h"
 
 class Renderer {
 public:
@@ -26,13 +28,11 @@ private:
     void SDLDrawPixel(int x, int y);
     void line(int x0, int y0, int x1, int y1);
     Vector3 barycentric(Vector3* pts, Vector3 P);
-    void triangle(Vector4* pts, SimpleShader*shader);
+    void triangle(Vector4* pts, IShader* shader, float* targetZBuffer);
     void ShowObjShaded();
-    Matrix4 GetModelMatrix();
-    Matrix4 GetViewMatrix();
-    Matrix4 GetProjectionMatrix();
     void ShowTextTip();
-    float* zbuffer;
+    float* zBuffer;
+    float* shadowBuffer;
     TGAImage tgaImage = TGAImage();
     TGAImage textTipImage = TGAImage();
     SDL_Event e;

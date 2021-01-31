@@ -11,6 +11,8 @@ Renderer::Renderer(int width, int height):mWidth(width), mHeight(height)
 Renderer::~Renderer()
 {
 	Close();
+	delete zBuffer;
+	delete shadowBuffer;
 }
 
 bool Renderer::UpdateFrame()
@@ -69,7 +71,8 @@ bool Renderer::UpdateFrame()
 
 void Renderer::Init(int screenWidth, int ScreenHeight)
 {
-	zbuffer = new float[mWidth * mHeight];
+	zBuffer = new float[mWidth * mHeight];
+	shadowBuffer = new float[mWidth * mHeight];
 	isInited = true;
 	useWireFrame = false;
 
@@ -104,7 +107,7 @@ void Renderer::Init(int screenWidth, int ScreenHeight)
 	
 	tgaImage.read_tga_file("../Assets/brick3.tga");
 	textTipImage.read_tga_file("../Assets/texttip.tga");
-	cameraPos = Vector4(0, 1, -40, 1);
+	cameraPos = Vector4(0, 1, -50, 1);
 }
 
 void Renderer::Close()
@@ -161,7 +164,7 @@ Vector3 Renderer::barycentric(Vector3* pts, Vector3 P)
 	return Vector3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
 }
 
-void Renderer::triangle(Vector4* pts, SimpleShader*shader)
+void Renderer::triangle(Vector4* pts, IShader* shader, float* targetZBuffer)
 {
 	Vector3 screenPts[3];
 	for (int i = 0; i < 3; i++)
@@ -170,6 +173,8 @@ void Renderer::triangle(Vector4* pts, SimpleShader*shader)
 		screenPts[i].x = (screenPts[i].x / 2 + 0.5) * mWidth;
 		screenPts[i].y = (screenPts[i].y / 2 + 0.5) * mHeight;
 		screenPts[i].z = (screenPts[i].z / 2 + 0.5);
+		if (screenPts[i].x<0 || screenPts[i].x>mWidth || screenPts[i].y<0 || screenPts[i].y>mHeight || screenPts[i].z < 0 || screenPts[i].z>1)
+			return;
 	}
 
 	if (useWireFrame)
@@ -195,12 +200,15 @@ void Renderer::triangle(Vector4* pts, SimpleShader*shader)
 			Vector3 bc_screen = barycentric(screenPts, P);
 			if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
 			P.z = screenPts[0][2] * bc_screen[0] + screenPts[1][2] * bc_screen[1] + screenPts[2][2] * bc_screen[2];
-			if (zbuffer[int(P.x + P.y * mWidth)] > P.z)
+			if (targetZBuffer[int(P.x + P.y * mWidth)] > P.z)
 			{
-				zbuffer[int(P.x + P.y * mWidth)] = P.z;
-				TGAColor tgaColor = shader->fragment(bc_screen);
-				SDL_SetRenderDrawColor(mRenderer, tgaColor[2], tgaColor[1], tgaColor[0], 0xFF);
-				SDLDrawPixel(P.x, P.y);
+				targetZBuffer[int(P.x + P.y * mWidth)] = P.z;
+				if (!shader->depthPass)
+				{
+					TGAColor tgaColor = shader->fragment(bc_screen, mWidth, mHeight);
+					SDL_SetRenderDrawColor(mRenderer, tgaColor[2], tgaColor[1], tgaColor[0], 0xFF);
+					SDLDrawPixel(P.x, P.y);
+				}
 			}
 		}
 	}
@@ -208,8 +216,7 @@ void Renderer::triangle(Vector4* pts, SimpleShader*shader)
 
 void Renderer::ShowObjShaded()
 {
-	//Depth Buffer
-	for (int i = mWidth * mHeight; i--; zbuffer[i] = FLT_MAX);
+	for (int i = mWidth * mHeight; i--; zBuffer[i] = shadowBuffer[i] = FLT_MAX);
 
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
@@ -220,18 +227,21 @@ void Renderer::ShowObjShaded()
 		printf("Failed to load/parse .obj.\n");
 		return;
 	}
-	Vector3 light_dir(0, 0, -1);
-	Matrix4 modelMatrix = GetModelMatrix();
-	Matrix4 mvpMatrix = GetProjectionMatrix() * GetViewMatrix() * modelMatrix;
+	Vector3 lightDir(0, 0, -40);
+	Matrix4 modelMatrix = GetModelMatrix(yawAngle);
+	Matrix4 mvpMatrix = GetProjectionMatrix(1.0 * mWidth / mHeight) * GetViewMatrix(cameraPos) * modelMatrix;
+	Matrix4 shadowMvpMatrix = GetProjectionMatrix(1.0 * mWidth / mHeight) * GetViewMatrix(Vector4(lightDir.x, lightDir.y, lightDir.z, 1)) * modelMatrix;
 	for (size_t i = 0; i < shapes.size(); i++) {
 		size_t index_offset = 0;
 		assert(shapes[i].mesh.num_face_vertices.size() == shapes[i].mesh.material_ids.size());
-		SimpleShader shader(&mvpMatrix, &modelMatrix, &tgaImage, light_dir);
+		SimpleShader shader(&mvpMatrix, &shadowMvpMatrix, &modelMatrix, &tgaImage, lightDir, shadowBuffer);
+		DepthShader depthShader(&shadowMvpMatrix);
 		// For each face
 		for (size_t f = 0; f < shapes[i].mesh.num_face_vertices.size(); f++) {
 			size_t fnum = shapes[i].mesh.num_face_vertices[f];
 			Vector4 modelPts;
 			Vector4 clip_coords[3];
+			Vector4 depth_clip_coords[3];
 			Vector3 uv;
 			Vector4 normal;
 			Vector4 viewDir[3];
@@ -243,66 +253,15 @@ void Renderer::ShowObjShaded()
 				normal = Vector4(attrib.normals[3 * idx.normal_index + 0], attrib.normals[3 * idx.normal_index + 1], attrib.normals[3 * idx.normal_index + 2],0);
 				viewDir[v] = cameraPos - modelMatrix * modelPts;
 				clip_coords[v] = shader.vertex(v, modelPts, uv, normal);
+				depth_clip_coords[v] = depthShader.vertex(v, modelPts, uv, normal);
 			}
+			//triangle(depth_clip_coords, &depthShader, shadowBuffer);
+
 			if (shader.varying_normal.getColumn(0).dot(viewDir[0]) > 0 || shader.varying_normal.getColumn(1).dot(viewDir[1]) > 0 || shader.varying_normal.getColumn(2).dot(viewDir[2]) > 0)
-				triangle(clip_coords, &shader);
+				triangle(clip_coords, &shader, zBuffer);
 			index_offset += fnum;
 		}
 	}
-}
-
-Matrix4 Renderer::GetModelMatrix()
-{
-	float yawRadians = yawAngle * 3.14 / 180;
-	Matrix4 scaleM = Matrix4();
-	scaleM.setColumn(0, Vector4(1, 0, 0, 0));
-	scaleM.setColumn(1, Vector4(0, 1, 0, 0));
-	scaleM.setColumn(2, Vector4(0, 0, 1, 0));
-	scaleM.setColumn(3, Vector4(0, 0, 0, 1));
-	Matrix4 rotationM = Matrix4();
-	rotationM.setColumn(0, Vector4(cos(yawAngle * 3.14 / 180), 0, -sin(yawAngle * 3.14 / 180), 0));
-	rotationM.setColumn(1, Vector4(0, 1, 0, 0));
-	rotationM.setColumn(2, Vector4(sin(yawAngle * 3.14 / 180), 0, cos(yawAngle * 3.14 / 180), 0));
-	rotationM.setColumn(3, Vector4(0, 0, 0, 1));
-	Matrix4 transformM = Matrix4();
-	transformM.setColumn(0, Vector4(1, 0, 0, 0));
-	transformM.setColumn(1, Vector4(0, 1, 0, 0));
-	transformM.setColumn(2, Vector4(0, 0, 1, 0));
-	transformM.setColumn(3, Vector4(0, 0, 0, 1));
-	return transformM * rotationM * scaleM;
-}
-
-
-Matrix4 Renderer::GetViewMatrix()
-{
-	Matrix4 minusM = Matrix4();
-	minusM.setColumn(0, Vector4(1, 0, 0, 0));
-	minusM.setColumn(1, Vector4(0, 1, 0, 0));
-	minusM.setColumn(2, Vector4(0, 0, -1, 0));
-	minusM.setColumn(3, Vector4(0, 0, 0, 1));
-	Matrix4 cameraRotationM = Matrix4();
-	cameraRotationM.setColumn(0, Vector4(1, 0, 0, 0));
-	cameraRotationM.setColumn(1, Vector4(0, 1, 0, 0));
-	cameraRotationM.setColumn(2, Vector4(0, 0, 1, 0));
-	cameraRotationM.setColumn(3, Vector4(0, 0, 0, 1));
-	Matrix4 cameraTransformM = Matrix4();
-	cameraTransformM.setColumn(0, Vector4(1, 0, 0, 0));
-	cameraTransformM.setColumn(1, Vector4(0, 1, 0, 0));
-	cameraTransformM.setColumn(2, Vector4(0, 0, 1, 0));
-	cameraTransformM.setColumn(3, Vector4(cameraPos.x, cameraPos.y, cameraPos.z, 1));
-	return minusM * cameraRotationM.invert() * cameraTransformM.invert();
-}
-
-Matrix4 Renderer::GetProjectionMatrix()
-{
-	float fovAngle = 60 * 3.14 / 180;
-	float f = 1000, n = 0.3;
-	Matrix4 projectionMatrix = Matrix4();
-	projectionMatrix.setColumn(0, Vector4(1/ std::tan(fovAngle/2) * mHeight / mWidth, 0, 0, 0));
-	projectionMatrix.setColumn(1, Vector4(0, 1/ std::tan(fovAngle / 2), 0, 0));
-	projectionMatrix.setColumn(2, Vector4(0, 0, -(f + n) / (f - n), -1));
-	projectionMatrix.setColumn(3, Vector4(0, 0, -2 * f * n / (f - n), 0));
-	return projectionMatrix;
 }
 
 void Renderer::ShowTextTip()

@@ -13,6 +13,7 @@ This is a C++ Software Renderer/Rasterizer.
 ## How to use it
 Clone and open TaurusRenderer.sln with Visual Studio.
 Press WASD to move camera.
+Press Q/E to rotate teapot.
 
 ## References
 * [SDL2](www.libsdl.org)
