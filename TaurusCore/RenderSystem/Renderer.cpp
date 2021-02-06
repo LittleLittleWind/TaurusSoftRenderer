@@ -49,10 +49,10 @@ bool Renderer::UpdateFrame()
 					cameraPos.x += 1;
 					break;
 				case SDLK_q:
-					yawAngle -= 10;
+					modelYawAngle -= 10;
 					break;
 				case SDLK_e:
-					yawAngle += 10;
+					modelYawAngle += 10;
 					break;
 				default:
 					break;
@@ -227,17 +227,18 @@ void Renderer::ShowObjShaded()
 		printf("Failed to load/parse .obj.\n");
 		return;
 	}
-	Vector3 lightDir(0, 0, -40);
-	Matrix4 modelMatrix = GetModelMatrix(yawAngle);
-	Matrix4 mvpMatrix = GetProjectionMatrix(1.0 * mWidth / mHeight) * GetViewMatrix(cameraPos) * modelMatrix;
-	Matrix4 shadowMvpMatrix = GetProjectionMatrix(1.0 * mWidth / mHeight) * GetViewMatrix(Vector4(lightDir.x, lightDir.y, lightDir.z, 1)) * modelMatrix;
+	Vector3 lightDir(-40, 0, 0);
+	Matrix4 modelMatrix = GetModelMatrix(modelYawAngle);
+	Matrix4 mvpMatrix = GetProjectionMatrix(1.0 * mWidth / mHeight) * GetViewMatrix(cameraPos, 0) * modelMatrix;
+	Matrix4 shadowMvpMatrix = GetProjectionMatrix(1.0 * mWidth / mHeight) * GetViewMatrix(Vector4(lightDir.x, lightDir.y, lightDir.z, 1), 90) * modelMatrix;
 	for (size_t i = 0; i < shapes.size(); i++) {
 		size_t index_offset = 0;
 		assert(shapes[i].mesh.num_face_vertices.size() == shapes[i].mesh.material_ids.size());
 		SimpleShader shader(&mvpMatrix, &shadowMvpMatrix, &modelMatrix, &tgaImage, lightDir, shadowBuffer);
 		DepthShader depthShader(&shadowMvpMatrix);
 		// For each face
-		for (size_t f = 0; f < shapes[i].mesh.num_face_vertices.size(); f++) {
+		for (size_t f = 0; f < shapes[i].mesh.num_face_vertices.size(); f++) 
+		{
 			size_t fnum = shapes[i].mesh.num_face_vertices[f];
 			Vector4 modelPts;
 			Vector4 clip_coords[3];
@@ -246,7 +247,8 @@ void Renderer::ShowObjShaded()
 			Vector4 normal;
 			Vector4 viewDir[3];
 			// For each vertex in the face
-			for (size_t v = 0; v < fnum; v++) {
+			for (size_t v = 0; v < fnum; v++) 
+			{
 				tinyobj::index_t idx = shapes[i].mesh.indices[index_offset + v];
 				modelPts = Vector4(attrib.vertices[3 * idx.vertex_index + 0], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2], 1);
 				uv = Vector3(attrib.texcoords[2 * idx.texcoord_index + 0], attrib.texcoords[2 * idx.texcoord_index + 1], 0);
@@ -255,7 +257,8 @@ void Renderer::ShowObjShaded()
 				clip_coords[v] = shader.vertex(v, modelPts, uv, normal);
 				depth_clip_coords[v] = depthShader.vertex(v, modelPts, uv, normal);
 			}
-			//triangle(depth_clip_coords, &depthShader, shadowBuffer);
+			//if(!useWireFrame)
+			//	triangle(depth_clip_coords, &depthShader, shadowBuffer);
 
 			if (shader.varying_normal.getColumn(0).dot(viewDir[0]) > 0 || shader.varying_normal.getColumn(1).dot(viewDir[1]) > 0 || shader.varying_normal.getColumn(2).dot(viewDir[2]) > 0)
 				triangle(clip_coords, &shader, zBuffer);

@@ -39,7 +39,7 @@ private:
     bool isInited;
     bool useWireFrame;
     Vector4 cameraPos;
-    float yawAngle;
+    float modelYawAngle;
 };
 
 #endif //__RENDERER_H__

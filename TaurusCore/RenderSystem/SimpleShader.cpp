@@ -28,13 +28,34 @@ TGAColor SimpleShader::fragment(const Vector3& bar, const int screenWiddth, cons
 	bn.normalize();
 	float intensity = (bn.dot(light_dir)) * 0.5f + 0.5f;
 	TGAColor color = tgaImage->get(buv[0] * tgaImage->get_width(), buv[1] * tgaImage->get_height());
-	//Vector4 clipPos = varying_clip.getColumn(0) * bar.x + varying_clip.getColumn(1) * bar.y + varying_clip.getColumn(2) * bar.z;
-	//Vector4 sb_p = shadowTransform * Vector4(clipPos.x, clipPos.y, clipPos.z, clipPos.w);
-	//sb_p /= sb_p.w;
-	//sb_p.x = (sb_p.x / 2 + 0.5) * screenWiddth;
-	//sb_p.y = (sb_p.y / 2 + 0.5) * screenHeight;
-	//sb_p.z = (sb_p.z / 2 + 0.5);
-	//int idx = int(sb_p[0] + sb_p[1] * screenWiddth);
-	//float shadow = .3 + .7 * (shadowBuffer[idx] < sb_p[2]);
+
+	Matrix4 transformedPos = shadowTransform * varying_clip;
+	Vector4 v1 = transformedPos.getColumn(0);
+	Vector4 v2 = transformedPos.getColumn(1);
+	Vector4 v3 = transformedPos.getColumn(2);
+	v1 /= v1.w;
+	v2 /= v2.w;
+	v3 /= v3.w;
+	v1.x = (v1.x / 2 + 0.5) * screenWiddth;
+	v1.y = (v1.y / 2 + 0.5) * screenHeight;
+	v1.z = (v1.z / 2 + 0.5);
+	v2.x = (v2.x / 2 + 0.5) * screenWiddth;
+	v2.y = (v2.y / 2 + 0.5) * screenHeight;
+	v2.z = (v2.z / 2 + 0.5);
+	v3.x = (v3.x / 2 + 0.5) * screenWiddth;
+	v3.y = (v3.y / 2 + 0.5) * screenHeight;
+	v3.z = (v3.z / 2 + 0.5);
+	Vector4 clipPos = v1 * bar.x + v2 * bar.y + v3 * bar.z;
+	
+	bool notInShadow = false;
+	if (clipPos.x<0 || clipPos.x>screenWiddth || clipPos.y<0 || clipPos.y>screenHeight || clipPos.z < 0 || clipPos.z>1)
+		notInShadow = true;
+	else
+	{
+		int idx = int(clipPos[0] + clipPos[1] * screenWiddth);
+		notInShadow = shadowBuffer[idx] > clipPos[2] - 0.1;
+	}
+	float shadow = .3 + .7 * notInShadow;
 	return color * intensity;
 }
+

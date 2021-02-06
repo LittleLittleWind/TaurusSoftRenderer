@@ -6,6 +6,7 @@
 #include "..\Matrix\Matrices.h"
 #include "tgaimage.h"
 #include "IShader.h"
+#include "Utility.h"
 
 class SimpleShader: public IShader {
 public:
