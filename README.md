@@ -9,6 +9,7 @@ This is a C++ Software Renderer/Rasterizer.
 * Depth testing
 * Lambert shading
 * Shader support
+* Shadow
 
 ## How to use it
 Clone and open TaurusRenderer.sln with Visual Studio.

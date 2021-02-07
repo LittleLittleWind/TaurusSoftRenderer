@@ -3,9 +3,11 @@
 #include "..\Matrix\Vectors.h"
 #include "..\Matrix\Matrices.h"
 
-Matrix4 GetModelMatrix(float yawAngle);
-Matrix4 GetViewMatrix(Vector4 cameraPos, float yawAngle);
-Matrix4 GetProjectionMatrix(float aspect);
-float clamp(float n, float lower, float upper);
+extern const int SCREEN_WIDTH;
+extern const int SCREEN_HEIGHT;
+
+extern Matrix4 GetModelMatrix(float yawAngle);
+extern Matrix4 GetViewMatrix(Vector4 cameraPos, float yawAngle);
+extern Matrix4 GetProjectionMatrix(float aspect);
 
 #endif //__UTILITY_H__

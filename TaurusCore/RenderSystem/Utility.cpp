@@ -1,5 +1,7 @@
 #include "Utility.h"
 
+const int SCREEN_WIDTH = 640;
+const int SCREEN_HEIGHT = 480;
 
 Matrix4 GetModelMatrix(float yawAngle)
 {
@@ -54,9 +56,4 @@ Matrix4 GetProjectionMatrix(float aspect)
 	projectionMatrix.setColumn(2, Vector4(0, 0, -(f + n) / (f - n), -1));
 	projectionMatrix.setColumn(3, Vector4(0, 0, -2 * f * n / (f - n), 0));
 	return projectionMatrix;
-}
-
-float clamp(float n, float lower, float upper)
-{
-	return std::max(lower, std::min(n, upper));
 }

@@ -3,9 +3,11 @@
 #include "Renderer.h"
 #include <cmath>
 
-Renderer::Renderer(int width, int height):mWidth(width), mHeight(height)
+Renderer::Renderer()
 {
-	Init(width, height);
+	mWidth = SCREEN_WIDTH;
+	mHeight = SCREEN_HEIGHT;
+	Init();
 }
 
 Renderer::~Renderer()
@@ -69,7 +71,7 @@ bool Renderer::UpdateFrame()
 	return isRunning;
 }
 
-void Renderer::Init(int screenWidth, int ScreenHeight)
+void Renderer::Init()
 {
 	zBuffer = new float[mWidth * mHeight];
 	shadowBuffer = new float[mWidth * mHeight];
@@ -88,7 +90,7 @@ void Renderer::Init(int screenWidth, int ScreenHeight)
 		{
 			printf("Warning: Linear texture filtering not enabled!");
 		}
-		mWindow = SDL_CreateWindow("TaurusRender", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screenWidth, ScreenHeight, SDL_WINDOW_SHOWN);
+		mWindow = SDL_CreateWindow("TaurusRender", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, mWidth, mHeight, SDL_WINDOW_SHOWN);
 		if (mWindow == NULL)
 		{
 			printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
@@ -237,8 +239,7 @@ void Renderer::ShowObjShaded()
 		SimpleShader shader(&mvpMatrix, &shadowMvpMatrix, &modelMatrix, &tgaImage, lightDir, shadowBuffer);
 		DepthShader depthShader(&shadowMvpMatrix);
 		// For each face
-		for (size_t f = 0; f < shapes[i].mesh.num_face_vertices.size(); f++) 
-		{
+		for (size_t f = 0; f < shapes[i].mesh.num_face_vertices.size(); f++) {
 			size_t fnum = shapes[i].mesh.num_face_vertices[f];
 			Vector4 modelPts;
 			Vector4 clip_coords[3];
@@ -247,8 +248,7 @@ void Renderer::ShowObjShaded()
 			Vector4 normal;
 			Vector4 viewDir[3];
 			// For each vertex in the face
-			for (size_t v = 0; v < fnum; v++) 
-			{
+			for (size_t v = 0; v < fnum; v++) {
 				tinyobj::index_t idx = shapes[i].mesh.indices[index_offset + v];
 				modelPts = Vector4(attrib.vertices[3 * idx.vertex_index + 0], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2], 1);
 				uv = Vector3(attrib.texcoords[2 * idx.texcoord_index + 0], attrib.texcoords[2 * idx.texcoord_index + 1], 0);
@@ -257,8 +257,8 @@ void Renderer::ShowObjShaded()
 				clip_coords[v] = shader.vertex(v, modelPts, uv, normal);
 				depth_clip_coords[v] = depthShader.vertex(v, modelPts, uv, normal);
 			}
-			//if(!useWireFrame)
-			//	triangle(depth_clip_coords, &depthShader, shadowBuffer);
+			if(!useWireFrame)
+				triangle(depth_clip_coords, &depthShader, shadowBuffer);
 
 			if (shader.varying_normal.getColumn(0).dot(viewDir[0]) > 0 || shader.varying_normal.getColumn(1).dot(viewDir[1]) > 0 || shader.varying_normal.getColumn(2).dot(viewDir[2]) > 0)
 				triangle(clip_coords, &shader, zBuffer);

@@ -13,13 +13,13 @@
 
 class Renderer {
 public:
-    Renderer(int width, int height);
+    Renderer();
     ~Renderer();
 
     bool UpdateFrame();
 private:
     Renderer(const Renderer&);
-    void Init(int screenWidth, int ScreenHeight);
+    void Init();
     void Close();
     SDL_Window* mWindow = NULL;
     SDL_Renderer* mRenderer = NULL;

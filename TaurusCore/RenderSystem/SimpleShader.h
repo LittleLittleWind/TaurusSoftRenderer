@@ -14,7 +14,7 @@ public:
     ~SimpleShader();
 
     Vector4 vertex(int id, const Vector4& modelPts, const Vector3& uv, const Vector4& normalDir);
-    TGAColor fragment(const Vector3& bar, const int screenWiddth, const int screenHeight);
+    TGAColor fragment(const Vector3& bar, const int screenWidth, const int screenHeight);
     Matrix3 varying_uv;
     Matrix4 varying_normal;
     Matrix4 varying_clip;
