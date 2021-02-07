@@ -207,7 +207,7 @@ void Renderer::triangle(Vector4* pts, IShader* shader, float* targetZBuffer)
 				targetZBuffer[int(P.x + P.y * mWidth)] = P.z;
 				if (!shader->depthPass)
 				{
-					TGAColor tgaColor = shader->fragment(bc_screen, mWidth, mHeight);
+					TGAColor tgaColor = shader->fragment(bc_screen);
 					SDL_SetRenderDrawColor(mRenderer, tgaColor[2], tgaColor[1], tgaColor[0], 0xFF);
 					SDLDrawPixel(P.x, P.y);
 				}

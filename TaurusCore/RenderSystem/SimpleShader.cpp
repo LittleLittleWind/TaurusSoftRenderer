@@ -21,7 +21,7 @@ Vector4 SimpleShader::vertex(int id, const Vector4& modelPts, const Vector3& uv,
 	return clipCoor;
 }
 
-TGAColor SimpleShader::fragment(const Vector3& bar, const int screenWidth, const int screenHeight)
+TGAColor SimpleShader::fragment(const Vector3& bar)
 {
 	Vector3 buv = varying_uv * bar;
 	Vector3 bn = varying_normal * bar;
@@ -32,15 +32,15 @@ TGAColor SimpleShader::fragment(const Vector3& bar, const int screenWidth, const
 	Vector3 clipPos = varying_clip * bar;
 	Vector4 transformedPos = shadowTransform * Vector4(clipPos.x, clipPos.y, clipPos.z, 1);
 	transformedPos /= transformedPos.w;
-	transformedPos.x = (transformedPos.x / 2 + 0.5) * screenWidth;
-	transformedPos.y = (transformedPos.y / 2 + 0.5) * screenHeight;
+	transformedPos.x = (transformedPos.x / 2 + 0.5) * SCREEN_WIDTH;
+	transformedPos.y = (transformedPos.y / 2 + 0.5) * SCREEN_HEIGHT;
 	transformedPos.z = (transformedPos.z / 2 + 0.5);
 	bool notInShadow = false;
-	if (transformedPos.x < 0 || transformedPos.x > screenWidth || transformedPos.y < 0 || transformedPos.y > screenHeight || transformedPos.z < 0 || transformedPos.z > 1)
+	if (transformedPos.x < 0 || transformedPos.x > SCREEN_WIDTH || transformedPos.y < 0 || transformedPos.y > SCREEN_HEIGHT || transformedPos.z < 0 || transformedPos.z > 1)
 		notInShadow = true;
 	else
 	{
-		int idx = (int)transformedPos.x + (int)transformedPos.y * screenWidth;
+		int idx = (int)transformedPos.x + (int)transformedPos.y * SCREEN_WIDTH;
 		notInShadow = shadowBuffer[idx] > transformedPos.z - 0.008;
 	}
 	float shadow = .2 + .8 * notInShadow;

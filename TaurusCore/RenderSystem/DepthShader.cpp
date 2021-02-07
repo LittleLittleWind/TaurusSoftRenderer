@@ -17,7 +17,7 @@ Vector4 DepthShader::vertex(int id, const Vector4& modelPts, const Vector3& uv, 
 	return clipCoor;
 }
 
-TGAColor DepthShader::fragment(const Vector3& bar, const int screenWidth, const int screenHeight)
+TGAColor DepthShader::fragment(const Vector3& bar)
 {
 	TGAColor color;
 	return color;

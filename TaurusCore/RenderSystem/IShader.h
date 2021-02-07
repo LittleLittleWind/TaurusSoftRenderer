@@ -10,7 +10,7 @@ class IShader {
 public:
     virtual ~IShader() {};
 
-    virtual TGAColor fragment(const Vector3& bar, const int screenWiddth, const int screenHeight) = 0;
+    virtual TGAColor fragment(const Vector3& bar) = 0;
     bool depthPass;
 };
 
