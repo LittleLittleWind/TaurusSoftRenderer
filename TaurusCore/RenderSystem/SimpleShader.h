@@ -21,9 +21,9 @@ public:
 private:
     SimpleShader(const SimpleShader&);
     TGAImage* tgaImage;
-    Matrix4* mvp;
-    Matrix4* model;
-    Matrix4 shadowTransform;
+    Matrix4 uniform_M;
+    Matrix4 uniform_MIT;
+    Matrix4 uniform_Mshadow;
     Vector3 light_dir;
     float* shadowBuffer;
 };

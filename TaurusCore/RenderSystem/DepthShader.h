@@ -18,7 +18,7 @@ public:
     Matrix4 varying_normal;
 private:
     DepthShader(const DepthShader&);
-    Matrix4* mvp;
+    Matrix4 uniform_M;
     Matrix4 clipCoors;
 };
 

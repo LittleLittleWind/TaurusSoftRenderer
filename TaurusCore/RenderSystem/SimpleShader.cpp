@@ -1,23 +1,25 @@
 #include "SimpleShader.h"
 
-SimpleShader::SimpleShader(Matrix4* m_mvp, Matrix4* s_mvp, Matrix4* m_model, TGAImage *image, Vector3 lightDir, float* s_buffer):mvp(m_mvp), model(m_model), tgaImage(image), light_dir(lightDir), shadowBuffer(s_buffer)
+SimpleShader::SimpleShader(Matrix4* m_mvp, Matrix4* s_mvp, Matrix4* m_model, TGAImage *image, Vector3 lightDir, float* s_buffer):uniform_M(*m_mvp),tgaImage(image), light_dir(lightDir), shadowBuffer(s_buffer)
 {
 	light_dir.normalize();
-	shadowTransform = (*s_mvp);
+	Matrix4 invertMVP = Matrix4(*m_mvp).invertGeneral();
+	uniform_MIT = Matrix4(*m_model).invertGeneral().transpose();
+	uniform_Mshadow = (*s_mvp) * invertMVP;
+	depthPass = false;
 }
 
 SimpleShader::~SimpleShader()
 {
-	depthPass = false;
+
 }
 
 Vector4 SimpleShader::vertex(int id, const Vector4& modelPts, const Vector3& uv, const Vector4& normalDir)
 {
-	Vector4 clipCoor = (*mvp) * modelPts;
+	Vector4 clipCoor = uniform_M * modelPts;
 	varying_uv.setColumn(id, uv);
-	Matrix4 normalMatrix = model->invertGeneral().transpose();
-	varying_normal.setColumn(id, normalMatrix * normalDir);
-	varying_clip.setColumn(id, modelPts);
+	varying_normal.setColumn(id, uniform_MIT * normalDir);
+	varying_clip.setColumn(id, clipCoor);
 	return clipCoor;
 }
 
@@ -29,8 +31,8 @@ TGAColor SimpleShader::fragment(const Vector3& bar)
 	float intensity = (bn.dot(light_dir)) * 0.5f + 0.5f;
 	TGAColor color = tgaImage->get(buv[0] * tgaImage->get_width(), buv[1] * tgaImage->get_height());
 
-	Vector3 clipPos = varying_clip * bar;
-	Vector4 transformedPos = shadowTransform * Vector4(clipPos.x, clipPos.y, clipPos.z, 1);
+	Vector4 clipPos = varying_clip.getColumn(0) * bar.x + varying_clip.getColumn(1) * bar.y + varying_clip.getColumn(2) * bar.z;
+	Vector4 transformedPos = uniform_Mshadow * clipPos;
 	transformedPos /= transformedPos.w;
 	transformedPos.x = (transformedPos.x / 2 + 0.5) * SCREEN_WIDTH;
 	transformedPos.y = (transformedPos.y / 2 + 0.5) * SCREEN_HEIGHT;
